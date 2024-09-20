@@ -1,49 +1,80 @@
-Sub DistribuirDadosQR()
-    Dim DadosQR As String
-    Dim PartesQR() As String
-    Dim LinhaAtual As Integer
-    Dim Nif1 As String
-    Dim Nif2 As String
-    Dim Valor As String
-    Dim DataFatura As String
-    Dim ws As Worksheet
-   
-    ' Especificar a planilha de destino ( "Sheet1")
-    Set ws = ThisWorkbook.Worksheets("Planilha1")
-   
-    ' Ler dados do QR na célula ativa
-    DadosQR = ActiveCell.Value
-   
-    ' Dividir os dados do QR com base no delimitador "*"
-    PartesQR = Split(DadosQR, "*")
-   
-    ' Assumindo que os dados do QR incluem NIF1, NIF2, Valor e Data da Fatura
-    If UBound(PartesQR) >= 5 Then
-        Nif1 = Mid(PartesQR(0), 3)      ' Remover "A." e pegar NIF1
-        Nif2 = Mid(PartesQR(1), 3)      ' Remover "B." e pegar NIF2
-        Valor = Mid(PartesQR(2), 3)     ' Remover "C." e pegar Valor
-        DataFatura = Mid(PartesQR(5), 3) ' Remover "F." e pegar Data da Fatura
-       
-        ' Encontrar a próxima linha vazia na coluna A da planilha especificada
-        LinhaAtual = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row + 1
-       
-        ' Inserir os dados nas colunas A, B, C e D da mesma linha
-        ws.Cells(LinhaAtual, 1).Value = Nif1         ' Inserir NIF1 na coluna A
-        ws.Cells(LinhaAtual, 2).Value = Nif2         ' Inserir NIF2 na coluna B
-        ws.Cells(LinhaAtual, 3).Value = Valor        ' Inserir Valor na coluna C
-        ws.Cells(LinhaAtual, 4).Value = DataFatura   ' Inserir Data da Fatura na coluna D
-    Else
-        MsgBox "Os dados do QR estão incompletos ou não estão no formato esperado."
-    End If
-   
-    ' Limpar a célula ativa para a próxima leitura
-    ActiveCell.ClearContents
-End Sub
+Sub DistribuirDadosQR_1()
+Dim DadosQR As String ' Variável para armazenar os dados lidos do QR Code
+Dim PartesQR() As String ' Array para armazenar as partes dos dados do QR Code, dividido por "*"
+Dim NumeroFatura As String ' Variável para armazenar o número da fatura
+Dim DataFatura As String ' Variável para armazenar a data da fatura
+Dim wsSource As Worksheet ' Variável para a planilha de origem ("LER QR CODE")
+Dim wsDest As Worksheet ' Variável para a planilha de destino ("09.24")
+Dim i As Integer ' Contador para o loop de processamento das partes do QR
 
+Dim LinhaInicial As Integer ' Variável para indicar a linha inicial dos dados a serem somados
+Dim LinhaAtual As Integer ' Variável para encontrar a primeira linha vazia da planilha de destino
+Dim LinhaResumo As Integer ' Variável para armazenar a linha do resumo (somatório)
 
+' Especificar as planilhas de origem e destino
+Set wsSource = ThisWorkbook.Worksheets("LER QR CODE")
+Set wsDest = ThisWorkbook.Worksheets("09.24")
 
+' Ler dados do QR na célula D3 da planilha "LER QR CODE"
+DadosQR = wsSource.Range("D3").Value
 
+' Dividir os dados do QR com base no delimitador "*"
+PartesQR = Split(DadosQR, "*")
 
+' Inicializar as variáveis para evitar problemas com dados ausentes
+NumeroFatura = "" ' Inicializa o número da fatura como uma string vazia
+Valor = 0 ' Inicializa o valor da fatura como 0
+DataFatura = "" ' Inicializa a data da fatura como string vazia
 
-Valor = CCur(Replace(Replace(Valor, ".", ""), ",", ".")) ' Remove ponto e troca vírgula por ponto para conversão
-        Valor = Format(Valor, "Currency") ' Formata como moeda (€)
+' Define a linha inicial para os cálculos de somatório
+LinhaInicial = 3
+
+' Encontrar a última linha preenchida na coluna 4 (Número da Fatura) e ir para a próxima linha vazia
+LinhaAtual = wsDest.Cells(wsDest.Rows.Count, 4).End(xlUp).Row + 1
+
+' Loop para percorrer cada parte do QR e identificar pelo prefixo
+For i = LBound(PartesQR) To UBound(PartesQR)
+    Select Case Left(PartesQR(i), 2)
+        Case "G:"
+            ' Se a parte começar com "G:", extrai o número da fatura
+            NumeroFatura = Trim(Mid(PartesQR(i), 3))
+        Case "O:"
+            ' Se a parte começar com "O:", extrai o valor da fatura
+            Valor = Trim(Mid(PartesQR(i), 3))
+            ' Corrigir o valor para usar vírgula como separador decimal (padrão europeu)
+            Valor = Replace(Valor, ".", ",")
+        Case "F:"
+            ' Se a parte começar com "F:", extrai a data da fatura
+            DataFatura = Trim(Mid(PartesQR(i), 3))
+    End Select
+Next i
+
+' Verificar se todos os dados necessários foram preenchidos corretamente
+If NumeroFatura <> "" And Valor <> 0 And DataFatura <> "" Then
+    ' Converter DataFatura do formato AAAAMMDD para DD/MM/AAAA
+    DataFatura = Format(DateSerial(Left(DataFatura, 4), Mid(DataFatura, 5, 2), Right(DataFatura, 2)), "DD/MM/YYYY")
+    
+    ' Inserir os dados nas colunas D, E, F e H da planilha de destino
+    wsDest.Cells(LinhaAtual, 4).Value = NumeroFatura  ' Inserir o número da fatura na coluna D
+    wsDest.Cells(LinhaAtual, 5).Value = CDbl(Replace(Valor, ".", ",")) ' Inserir o valor na coluna E
+    wsDest.Cells(LinhaAtual, 6).Value = Abs(CDbl(Replace(Valor, ".", ","))) ' Inserir o valor absoluto na coluna F
+    wsDest.Cells(LinhaAtual, 8).Value = DataFatura    ' Inserir a data de recebimento na coluna H
+
+    ' Formatar as colunas de valor como moeda (€)
+    wsDest.Cells(LinhaAtual, 5).NumberFormat = "€ #,##0.00" ' Formato de moeda para a coluna E
+    wsDest.Cells(LinhaAtual, 6).NumberFormat = "€ #,##0.00" ' Formato de moeda para a coluna F
+
+    ' Atualizar a linha de resumo, que fica logo abaixo da última linha preenchida
+    LinhaResumo = LinhaAtual + 1
+    
+    wsDest.Cells(LinhaResumo, 1) = "Média" ' Insere o texto "Média" na coluna A da linha de resumo
+    wsDest.Cells(LinhaResumo, 4) = "Soma" ' Insere o texto "Soma" na coluna D da linha de resumo
+    wsDest.Cells(LinhaResumo, 5).Formula = "=SUM(E" & LinhaInicial & ":E" & LinhaAtual & ")"  ' Soma a coluna E (valores)
+    wsDest.Cells(LinhaResumo, 6).Formula = "=SUM(F" & LinhaInicial & ":F" & LinhaAtual & ")"  ' Soma a coluna F (valores absolutos)
+Else
+    ' Se os dados do QR estiverem incompletos, exibe uma mensagem de erro
+    MsgBox "Os dados do QR estão incompletos ou não estão no formato esperado."
+End If
+
+' Limpar a célula D3 da planilha de origem para uma nova leitura
+wsSource.Range("D3").ClearContents
