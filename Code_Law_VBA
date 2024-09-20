@@ -39,3 +39,11 @@ Sub DistribuirDadosQR()
     ' Limpar a célula ativa para a próxima leitura
     ActiveCell.ClearContents
 End Sub
+
+
+
+
+
+
+Valor = CCur(Replace(Replace(Valor, ".", ""), ",", ".")) ' Remove ponto e troca vírgula por ponto para conversão
+        Valor = Format(Valor, "Currency") ' Formata como moeda (€)
