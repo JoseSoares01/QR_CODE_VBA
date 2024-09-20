@@ -1,0 +1,41 @@
+Sub DistribuirDadosQR()
+    Dim DadosQR As String
+    Dim PartesQR() As String
+    Dim LinhaAtual As Integer
+    Dim Nif1 As String
+    Dim Nif2 As String
+    Dim Valor As String
+    Dim DataFatura As String
+    Dim ws As Worksheet
+   
+    ' Especificar a planilha de destino ( "Sheet1")
+    Set ws = ThisWorkbook.Worksheets("Planilha1")
+   
+    ' Ler dados do QR na célula ativa
+    DadosQR = ActiveCell.Value
+   
+    ' Dividir os dados do QR com base no delimitador "*"
+    PartesQR = Split(DadosQR, "*")
+   
+    ' Assumindo que os dados do QR incluem NIF1, NIF2, Valor e Data da Fatura
+    If UBound(PartesQR) >= 5 Then
+        Nif1 = Mid(PartesQR(0), 3)      ' Remover "A." e pegar NIF1
+        Nif2 = Mid(PartesQR(1), 3)      ' Remover "B." e pegar NIF2
+        Valor = Mid(PartesQR(2), 3)     ' Remover "C." e pegar Valor
+        DataFatura = Mid(PartesQR(5), 3) ' Remover "F." e pegar Data da Fatura
+       
+        ' Encontrar a próxima linha vazia na coluna A da planilha especificada
+        LinhaAtual = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row + 1
+       
+        ' Inserir os dados nas colunas A, B, C e D da mesma linha
+        ws.Cells(LinhaAtual, 1).Value = Nif1         ' Inserir NIF1 na coluna A
+        ws.Cells(LinhaAtual, 2).Value = Nif2         ' Inserir NIF2 na coluna B
+        ws.Cells(LinhaAtual, 3).Value = Valor        ' Inserir Valor na coluna C
+        ws.Cells(LinhaAtual, 4).Value = DataFatura   ' Inserir Data da Fatura na coluna D
+    Else
+        MsgBox "Os dados do QR estão incompletos ou não estão no formato esperado."
+    End If
+   
+    ' Limpar a célula ativa para a próxima leitura
+    ActiveCell.ClearContents
+End Sub
